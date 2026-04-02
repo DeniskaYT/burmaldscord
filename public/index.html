@@ -1,58 +1,120 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>BURMALDSCORD | FINAL FIX</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BURMALDSCORD | HQ</title>
     <style>
-        body { background: #000; color: #00ff41; font-family: 'Consolas', monospace; margin: 0; padding: 0; height: 100vh; width: 100vw; }
-        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .auth-card { border: 2px solid #00ff41; padding: 40px; background: #050505; box-shadow: 0 0 20px #00ff41; text-align: center; }
-        #app { display: none; height: 100vh; width: 100vw; flex-direction: row; }
-        #sidebar { width: 280px; border-right: 1px solid #111; padding: 20px; background: #020202; }
-        #main { flex: 1; position: relative; background: #080808; display: flex; flex-direction: column; }
-        #chat { flex: 1; padding: 20px; overflow-y: auto; color: #fff; }
+        :root { --green: #00ff41; --red: #ff3547; --bg: #050505; --panel: #0a0a0a; }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); color: var(--green); font-family: 'Consolas', monospace; margin: 0; height: 100vh; overflow: hidden; }
+
+        /* Оверлей входа */
+        #auth-overlay { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .auth-card { border: 2px solid var(--green); padding: 40px; background: var(--panel); text-align: center; box-shadow: 0 0 30px rgba(0,255,65,0.2); }
+        .auth-card h1 { font-size: 2.5em; letter-spacing: 5px; margin-bottom: 20px; text-shadow: 0 0 10px var(--green); }
+        
+        /* Основная сетка */
+        #app { display: none; height: 100vh; flex-direction: row; }
+        
+        /* Левая панель (Список кабанов) */
+        #sidebar { width: 320px; border-right: 2px solid #111; background: #000; display: flex; flex-direction: column; padding: 15px; }
+        .hq-label { font-size: 0.8em; color: #444; border-bottom: 1px solid #111; padding-bottom: 10px; margin-bottom: 15px; letter-spacing: 2px; }
+        #user-list { flex: 1; overflow-y: auto; }
+        .user-node { 
+            padding: 12px; border: 1px solid #111; margin-bottom: 8px; cursor: pointer; transition: 0.1s; 
+            background: linear-gradient(90deg, #050505 0%, #0a0a0a 100%);
+        }
+        .user-node:hover { border-color: var(--green); background: #111; }
+        .user-node b { color: #fff; font-size: 1.1em; }
+        .loc-tag { font-size: 0.7em; color: #008f11; display: block; margin-top: 4px; }
+
+        /* Чат */
+        #main { flex: 1; display: flex; flex-direction: column; position: relative; background: #080808; }
+        #chat { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg-line { line-height: 1.4; border-left: 2px solid #111; padding-left: 10px; }
+        .msg-time { color: #333; font-size: 0.8em; margin-right: 8px; }
+        .msg-author { color: var(--green); font-weight: bold; margin-right: 8px; }
+        
+        /* Ввод */
         #controls { padding: 20px; background: #000; border-top: 1px solid #111; display: flex; gap: 10px; }
-        input { background: #111; color: #00ff41; border: 1px solid #00ff41; padding: 12px; border-radius: 5px; outline: none; }
-        button { background: #00ff41; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        #call-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .avatar { width: 160px; height: 160px; border-radius: 50%; border: 4px solid #00ff41; animation: shake 0.1s infinite; }
-        @keyframes shake { 0% { transform: rotate(1deg); } 50% { transform: rotate(-1deg); } 100% { transform: rotate(1deg); } }
+        input { background: #000; color: var(--green); border: 1px solid #222; padding: 12px 18px; border-radius: 4px; outline: none; flex: 1; font-family: inherit; font-size: 1em; }
+        input:focus { border-color: var(--green); }
+        button { background: var(--green); color: #000; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
+
+        /* ЭКРАН ВЫЗОВА (ПО ФОТО) */
+        #call-overlay { 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.95); 
+            display: none; flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 1000; backdrop-filter: blur(15px); 
+        }
+        .inc-label { font-size: 1.1em; letter-spacing: 6px; color: #fff; opacity: 0.6; margin-bottom: 40px; }
+        .caller-avatar { 
+            width: 240px; height: 240px; border-radius: 50%; object-fit: cover; 
+            border: 6px solid var(--green); box-shadow: 0 0 60px rgba(0, 255, 65, 0.4);
+            animation: ring-shake 0.2s infinite; margin-bottom: 40px;
+        }
+        .caller-name-big { font-size: 4em; font-weight: 900; color: #fff; margin-bottom: 80px; text-transform: uppercase; letter-spacing: -2px; }
+        .call-actions { display: flex; gap: 80px; }
+        .call-btn { 
+            width: 100px; height: 100px; border-radius: 50%; border: none; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; transition: 0.3s;
+        }
+        .call-btn img { width: 40px; filter: invert(1); }
+        .btn-accept { background: #00c851; box-shadow: 0 0 30px #00c851; }
+        .btn-decline { background: #ff3547; box-shadow: 0 0 30px #ff3547; }
+        .call-btn:hover { transform: scale(1.15); filter: brightness(1.2); }
+
+        @keyframes ring-shake {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(2deg) scale(1.02); }
+            75% { transform: rotate(-2deg) scale(1.02); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
     </style>
 </head>
 <body>
+
     <div id="auth-overlay">
         <div class="auth-card">
-            <h1 style="letter-spacing: 5px;">HQ ACCESS</h1>
-            <input id="nick-input" placeholder="ПОЗЫВНОЙ..." style="width: 250px; margin-bottom: 20px; text-align: center;" />
-            <br>
-            <button onclick="startApp()">ВХОД</button>
+            <h1>BURMALDSCORD</h1>
+            <input id="nick-input" placeholder="ПОЗЫВНОЙ..." maxlength="15" />
+            <br><br>
+            <button onclick="startApp()">ВОРВАТЬСЯ</button>
         </div>
     </div>
 
     <div id="app">
         <div id="sidebar">
-            <h2 style="color:#00ff41; font-size: 1em;">ONLINE_UNITS</h2>
+            <div class="hq-label">МУРИНО-МЫТИЩИ_HQ</div>
             <div id="user-list"></div>
-            <div style="margin-top: auto; padding-top: 20px;">
-                <input id="target-id" placeholder="TARGET_ID" style="width: 100%; margin-bottom: 10px; font-size: 0.8em;" />
-                <button onclick="callUser()" style="width: 100%;">CALL</button>
+            <div style="margin-top: auto; border-top: 1px solid #111; padding-top: 15px;">
+                <input id="target-id" placeholder="ID КЕНТА" style="width: 100%; margin-bottom: 10px; font-size: 0.8em; padding: 8px;" />
+                <button onclick="callUser()" style="width: 100%; padding: 10px;">НАБРАТЬ</button>
             </div>
         </div>
+
         <div id="main">
             <div id="call-overlay">
-                <h2 style="color: #00ff41; letter-spacing: 3px;">INCOMING_CALL</h2>
-                <img src="https://i.postimg.cc/85zXpxYy/image.png" class="avatar">
-                <h1 id="caller-name">ДРУН</h1>
-                <div style="margin-top: 30px; display: flex; gap: 30px;">
-                    <button onclick="acceptCall()" style="background: #00c851; width: 120px;">ACCEPT</button>
-                    <button onclick="rejectCall()" style="background: #ff3547; width: 120px;">DROP</button>
+                <div class="inc-label">ВХОДЯЩИЙ ВЫЗОВ</div>
+                <img src="https://i.postimg.cc/85zXpxYy/image.png" class="caller-avatar">
+                <div class="caller-name-big" id="caller-display">����</div>
+                <div class="call-actions">
+                    <button class="call-btn btn-decline" onclick="rejectCall()">
+                        <img src="https://img.icons8.com/ios-filled/50/ffffff/end-call.png"/>
+                    </button>
+                    <button class="call-btn btn-accept" onclick="acceptCall()">
+                        <img src="https://img.icons8.com/ios-filled/50/ffffff/phone.png"/>
+                    </button>
                 </div>
-                <audio id="ringtone" loop src="/ringtone.mp3"></audio>
+                <audio id="ringtone" loop src="ringtone.mp3"></audio>
             </div>
+
             <div id="chat"></div>
             <div id="controls">
-                <input id="msg" style="flex: 1;" placeholder="DATA_TRANSFER..." />
-                <button onclick="sendMsg()">SEND</button>
+                <input id="msg" placeholder="Базарни чо-нить..." autocomplete="off" />
+                <button onclick="sendMsg()">ОТПРАВИТЬ</button>
             </div>
         </div>
     </div>
@@ -62,27 +124,32 @@
     <script>
         const socket = io();
         let myPeer, myStream, currentCall, myNick;
+        const locations = ["МУРИНО", "МЫТИЩИ", "СЕЛО МОЛОЧНОЕ", "ОБЩАГА", "ШТАБ-КВАРТИРА", "ПИТЕРСКИЙ ФИЛИАЛ"];
 
         function startApp() {
             myNick = document.getElementById('nick-input').value;
             if(!myNick) return;
+            
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('app').style.display = 'flex';
             
             myPeer = new Peer(undefined, { host: '/', port: '443', path: '/peerjs', secure: true });
             
             myPeer.on('open', id => {
-                socket.emit('register-user', { peerId: id, name: myNick });
-                const me = document.createElement('div');
-                me.innerHTML = <span style="color:#555">YOU:</span> \ <br> <small>\</small><hr style="border:0; border-bottom:1px solid #111">;
-                document.getElementById('user-list').prepend(me);
+                const myLoc = locations[Math.floor(Math.random() * locations.length)];
+                socket.emit('register-user', { peerId: id, name: myNick, loc: myLoc });
+                
+                const selfNode = document.createElement('div');
+                selfNode.className = 'user-node';
+                selfNode.innerHTML = `<b>${myNick} (ТЫ)</b><span class="loc-tag">ЛОКАЦИЯ: ${myLoc}</span><small style="color:#222">${id}</small>`;
+                document.getElementById('user-list').prepend(selfNode);
             });
 
             myPeer.on('call', call => {
                 currentCall = call;
+                document.getElementById('caller-display').innerText = call.metadata?.callerName || "КЕНТ";
                 document.getElementById('call-overlay').style.display = 'flex';
-                const rt = document.getElementById('ringtone');
-                rt.play().catch(e => console.log("Нужен клик для звука"));
+                document.getElementById('ringtone').play().catch(() => {});
             });
         }
 
@@ -91,11 +158,11 @@
             currentCall.answer(myStream);
             const audio = document.createElement('audio');
             currentCall.on('stream', s => { audio.srcObject = s; audio.play(); });
-            closeOverlay();
+            stopCallUI();
         }
 
-        function rejectCall() { if(currentCall) currentCall.close(); closeOverlay(); }
-        function closeOverlay() { 
+        function rejectCall() { if(currentCall) currentCall.close(); stopCallUI(); }
+        function stopCallUI() {
             document.getElementById('call-overlay').style.display = 'none';
             document.getElementById('ringtone').pause();
         }
@@ -104,7 +171,7 @@
             const id = document.getElementById('target-id').value;
             if(!id) return;
             myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const call = myPeer.call(id, myStream);
+            const call = myPeer.call(id, myStream, { metadata: { callerName: myNick } });
             const audio = document.createElement('audio');
             call.on('stream', s => { audio.srcObject = s; audio.play(); });
         }
@@ -116,21 +183,22 @@
 
         socket.on('chat message', m => {
             const d = document.createElement('div');
-            d.innerHTML = <span style="color:#00ff41">\:</span> \;
+            d.className = 'msg-line';
+            d.innerHTML = `<span class="msg-time">${new Date().toLocaleTimeString()}</span><span class="msg-author">${m.name}:</span> ${m.text}`;
             const c = document.getElementById('chat');
             c.appendChild(d); c.scrollTop = c.scrollHeight;
         });
 
         socket.on('update-user-list', users => {
             const list = document.getElementById('user-list');
-            const selfId = myPeer ? myPeer.id : null;
             list.innerHTML = '';
             users.forEach(u => {
-                if(u.id === selfId) return;
+                if(myPeer && u.id === myPeer.id) return;
                 const item = document.createElement('div');
-                item.style.padding = "5px 0";
-                item.innerHTML = ● \ <br> <small style="color:#333; font-size:0.7em;">\</small>;
-                item.style.cursor = 'pointer';
+                item.className = 'user-node';
+                // Генерим локу для других кабанов, если сервер ее не прислал
+                const uLoc = u.loc || locations[Math.floor(Math.random() * locations.length)];
+                item.innerHTML = `<b>${u.name}</b><span class="loc-tag">ЛОКАЦИЯ: ${uLoc}</span><small style="color:#222">${u.id}</small>`;
                 item.onclick = () => document.getElementById('target-id').value = u.id;
                 list.appendChild(item);
             });
