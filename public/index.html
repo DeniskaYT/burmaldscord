@@ -2,86 +2,87 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>BURMALDSCORD | STABLE</title>
+    <title>BURMALDSCORD | FINAL FIX</title>
     <style>
-        body { background: #000; color: #00ff41; font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; }
-        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; display: flex; align-items: center; justify-content: center; }
-        .auth-card { border: 2px solid #00ff41; padding: 30px; text-align: center; background: #050505; }
-        #app { display: none; height: 100vh; flex-direction: row; }
-        #sidebar { width: 250px; border-right: 1px solid #222; padding: 20px; }
-        #main { flex: 1; display: flex; flex-direction: column; position: relative; }
-        #chat { flex: 1; padding: 20px; overflow-y: auto; font-family: monospace; }
-        #controls { padding: 20px; border-top: 1px solid #222; display: flex; gap: 10px; }
-        input { background: #111; color: #00ff41; border: 1px solid #333; padding: 10px; border-radius: 5px; outline: none; }
-        button { background: #00ff41; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; }
-        #call-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
-        .avatar { width: 150px; height: 150px; border-radius: 50%; border: 4px solid #00ff41; animation: shake 0.2s infinite; }
-        @keyframes shake { 0% { transform: translate(2px, 2px); } 50% { transform: translate(-2px, -2px); } 100% { transform: translate(2px, 2px); } }
+        body { background: #000; color: #00ff41; font-family: 'Consolas', monospace; margin: 0; padding: 0; height: 100vh; width: 100vw; }
+        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .auth-card { border: 2px solid #00ff41; padding: 40px; background: #050505; box-shadow: 0 0 20px #00ff41; text-align: center; }
+        #app { display: none; height: 100vh; width: 100vw; flex-direction: row; }
+        #sidebar { width: 280px; border-right: 1px solid #111; padding: 20px; background: #020202; }
+        #main { flex: 1; position: relative; background: #080808; display: flex; flex-direction: column; }
+        #chat { flex: 1; padding: 20px; overflow-y: auto; color: #fff; }
+        #controls { padding: 20px; background: #000; border-top: 1px solid #111; display: flex; gap: 10px; }
+        input { background: #111; color: #00ff41; border: 1px solid #00ff41; padding: 12px; border-radius: 5px; outline: none; }
+        button { background: #00ff41; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        #call-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .avatar { width: 160px; height: 160px; border-radius: 50%; border: 4px solid #00ff41; animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: rotate(1deg); } 50% { transform: rotate(-1deg); } 100% { transform: rotate(1deg); } }
     </style>
 </head>
 <body>
     <div id="auth-overlay">
         <div class="auth-card">
-            <h2>ВХОД В ШТАБ</h2>
-            <input id="nick-input" placeholder="Твой позывной..." />
-            <button onclick="startApp()">ВОЙТИ</button>
+            <h1 style="letter-spacing: 5px;">HQ ACCESS</h1>
+            <input id="nick-input" placeholder="ПОЗЫВНОЙ..." style="width: 250px; margin-bottom: 20px; text-align: center;" />
+            <br>
+            <button onclick="startApp()">ВХОД</button>
         </div>
     </div>
 
     <div id="app">
         <div id="sidebar">
-            <h3>В СЕТИ</h3>
+            <h2 style="color:#00ff41; font-size: 1em;">ONLINE_UNITS</h2>
             <div id="user-list"></div>
-            <div style="margin-top: 20px;">
-                <input id="target-id" placeholder="ID кента" style="width: 150px;" />
-                <button onclick="callUser()" style="margin-top: 10px; width: 100%;">ПОЗВОНИТЬ</button>
+            <div style="margin-top: auto; padding-top: 20px;">
+                <input id="target-id" placeholder="TARGET_ID" style="width: 100%; margin-bottom: 10px; font-size: 0.8em;" />
+                <button onclick="callUser()" style="width: 100%;">CALL</button>
             </div>
         </div>
         <div id="main">
             <div id="call-overlay">
-                <h1 style="color: #00ff41;">ВХОДЯЩИЙ ВЫЗОВ</h1>
-                <img src="/mell.png" class="avatar" onerror="this.src='https://i.postimg.cc/85zXpxYy/image.png'">
-                <h2 id="caller-name">ДРУН</h2>
-                <div style="margin-top: 20px; display: flex; gap: 20px;">
-                    <button onclick="acceptCall()" style="background: #00c851;">ПРИНЯТЬ</button>
-                    <button onclick="rejectCall()" style="background: #ff3547;">СБРОСИТЬ</button>
+                <h2 style="color: #00ff41; letter-spacing: 3px;">INCOMING_CALL</h2>
+                <img src="https://i.postimg.cc/85zXpxYy/image.png" class="avatar">
+                <h1 id="caller-name">ДРУН</h1>
+                <div style="margin-top: 30px; display: flex; gap: 30px;">
+                    <button onclick="acceptCall()" style="background: #00c851; width: 120px;">ACCEPT</button>
+                    <button onclick="rejectCall()" style="background: #ff3547; width: 120px;">DROP</button>
                 </div>
                 <audio id="ringtone" loop src="/ringtone.mp3"></audio>
             </div>
             <div id="chat"></div>
             <div id="controls">
-                <input id="msg" style="flex: 1;" placeholder="Сообщение..." />
-                <button onclick="sendMsg()">ОТПРАВИТЬ</button>
+                <input id="msg" style="flex: 1;" placeholder="DATA_TRANSFER..." />
+                <button onclick="sendMsg()">SEND</button>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
         const socket = io();
         let myPeer, myStream, currentCall, myNick;
 
         function startApp() {
             myNick = document.getElementById('nick-input').value;
-            if(!myNick) return alert("Введи имя!");
+            if(!myNick) return;
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('app').style.display = 'flex';
-            initPeer();
-        }
-
-        function initPeer() {
+            
             myPeer = new Peer(undefined, { host: '/', port: '443', path: '/peerjs', secure: true });
             
             myPeer.on('open', id => {
                 socket.emit('register-user', { peerId: id, name: myNick });
-                console.log("Connected as: " + id);
+                const me = document.createElement('div');
+                me.innerHTML = <span style="color:#555">YOU:</span> \ <br> <small>\</small><hr style="border:0; border-bottom:1px solid #111">;
+                document.getElementById('user-list').prepend(me);
             });
 
             myPeer.on('call', call => {
                 currentCall = call;
                 document.getElementById('call-overlay').style.display = 'flex';
-                document.getElementById('ringtone').play();
+                const rt = document.getElementById('ringtone');
+                rt.play().catch(e => console.log("Нужен клик для звука"));
             });
         }
 
@@ -93,7 +94,7 @@
             closeOverlay();
         }
 
-        function rejectCall() { currentCall.close(); closeOverlay(); }
+        function rejectCall() { if(currentCall) currentCall.close(); closeOverlay(); }
         function closeOverlay() { 
             document.getElementById('call-overlay').style.display = 'none';
             document.getElementById('ringtone').pause();
@@ -101,6 +102,7 @@
 
         async function callUser() {
             const id = document.getElementById('target-id').value;
+            if(!id) return;
             myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const call = myPeer.call(id, myStream);
             const audio = document.createElement('audio');
@@ -114,17 +116,20 @@
 
         socket.on('chat message', m => {
             const d = document.createElement('div');
-            d.innerHTML = <b>\:</b> \;
-            document.getElementById('chat').appendChild(d);
+            d.innerHTML = <span style="color:#00ff41">\:</span> \;
+            const c = document.getElementById('chat');
+            c.appendChild(d); c.scrollTop = c.scrollHeight;
         });
 
         socket.on('update-user-list', users => {
             const list = document.getElementById('user-list');
+            const selfId = myPeer ? myPeer.id : null;
             list.innerHTML = '';
             users.forEach(u => {
-                if(u.id === myPeer.id) return;
+                if(u.id === selfId) return;
                 const item = document.createElement('div');
-                item.innerHTML = ● \ <br> <small style="color:#444">\</small>;
+                item.style.padding = "5px 0";
+                item.innerHTML = ● \ <br> <small style="color:#333; font-size:0.7em;">\</small>;
                 item.style.cursor = 'pointer';
                 item.onclick = () => document.getElementById('target-id').value = u.id;
                 list.appendChild(item);
