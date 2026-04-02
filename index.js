@@ -5,9 +5,9 @@ const server = require('http').Server(app);
 const io = require('socket.io')(server);
 const { ExpressPeerServer } = require('peer');
 
-const peerServer = ExpressPeerServer(server, { debug: true, path: '/myapp' });
+const peerServer = ExpressPeerServer(server, { debug: true, path: '/peerjs' });
 app.use('/peerjs', peerServer);
-criptapp.use(express.static('public')); // ← теперь ищет в корне репозитория
+app.use(express.static('public'));
 
 let activeUsers = [];
 
@@ -28,4 +28,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('HQ LIVE [' + 308308718 + '] ON PORT ' + PORT); });
+server.listen(PORT, () => { console.log('HQ LIVE [308308718] ON PORT ' + PORT); });
