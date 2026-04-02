@@ -8,44 +8,71 @@
         #auth-overlay { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .auth-card { border: 2px solid #00ff41; padding: 40px; background: #0a0a0a; text-align: center; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); }
         #app { display: none; height: 100vh; display: flex; }
-        #sidebar { width: 300px; border-right: 1px solid #11; padding: 20px; display: flex; flex-direction: column; }
+        #sidebar { width: 300px; border-right: 1px solid #111; padding: 20px; display: flex; flex-direction: column; }
         #user-list { flex: 1; overflow-y: auto; }
         .user-node { padding: 12px; border: 1px solid #222; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
         .user-node:hover { border-color: #00ff41; background: #0a0a0a; }
         #main { flex: 1; position: relative; background: #080808; display: flex; flex-direction: column; }
-        #chat { flex: 1; padding: 20px; overflow-y: auto; font-size: 0.9em; }
-        #call-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .btn { padding: 15px 30px; border: none; cursor: pointer; font-weight: bold; font-family: inherit; margin: 10px; }
+        #chat { flex: 1; padding: 20px; overflow-y: auto; border-bottom: 1px solid #111; }
+        
+        /* Экран звонка */
+        #call-overlay { 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.95); 
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; 
+        }
+        
+        /* Тряска Меллстроя */
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(5deg); }
+            50% { transform: rotate(0eg); }
+            75% { transform: rotate(-5deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .caller-avatar { 
+            width: 250px; height: 250px; border-radius: 50%; 
+            border: 5px solid #00ff41; margin-bottom: 20px;
+            animation: shake 0.2s infinite; 
+        }
+
+        .btn-call { width: 80px; height: 80px; border-radius: 50%; border: none; cursor: pointer; font-size: 2em; display: flex; align-items: center; justify-content: center; }
         input { background: #000; border: 1px solid #333; color: #00ff41; padding: 12px; font-family: inherit; outline: none; }
-        button { background: #00ff41; color: #000; border: none; padding: 12px 20px; font-weight: bold; cursor: pointer; }
+        button { background: #00ff41; color: #000; border: none; padding: 12px; font-weight: bold; cursor: pointer; font-family: inherit; }
+        .hangup-btn { background: #ff3547; color: #fff; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
+
     <div id="auth-overlay">
         <div class="auth-card">
-            <h1>BURMALDSCORD</h1>
-            <input id="nick" placeholder="ПОЗЫВНОЙ..." autocomplete="off">
+            <h1 style="letter-spacing: 5px;">BURMALDSCORD</h1>
+            <input id="nick" placeholder="ТВОЙ ПОЗЫВНОЙ..." autocomplete="off">
+            <br><br>
             <button onclick="start()">ВОРВАТЬСЯ</button>
         </div>
     </div>
 
     <div id="app">
         <div id="sidebar">
-            <div style="color:#444; margin-bottom:15px; font-size: 0.8em;">КЛЕТКИ С КАБАНАМИ:</div>
+            <div style="color:#444; margin-bottom:15px; font-size: 0.8em;">КАБАНЫ В СЕТИ:</div>
             <div id="user-list"></div>
+            <button id="hangup-ui" class="hangup-btn" onclick="hangup()">СБРОСИТЬ БАЗАР</button>
         </div>
+
         <div id="main">
             <div id="call-overlay">
-                <h1 id="caller-name">КТО-ТО ЗВОНИТ...</h1>
-                <div>
-                    <button class="btn" style="background:#00c851" onclick="accept()">БАЗАРИТЬ</button>
-                    <button class="btn" style="background:#ff3547" onclick="reject()">СБРОСИТЬ</button>
+                <img src="https://i.postimg.cc/85zXpxYy/image.png" class="caller-avatar">
+                <h1 id="caller-name" style="color:#fff; margin-bottom:30px;">ЗВОНОК...</h1>
+                <div style="display: flex; gap: 40px;">
+                    <button class="btn-call" style="background:#ff3547" onclick="reject()">✖</button>
+                    <button class="btn-call" style="background:#00c851" onclick="accept()">✔</button>
                 </div>
                 <audio id="ring" loop src="ringtone.mp3"></audio>
             </div>
+
             <div id="chat"></div>
-            <div style="padding:20px; display:flex; gap:10px; border-top: 1px solid #111;">
-                <input id="msg" style="flex:1" placeholder="Пиши че по чем..." onkeypress="if(event.key==='Enter')send()">
+            <div style="padding:20px; display:flex; gap:10px;">
+                <input id="msg" style="flex:1" placeholder="Че скажешь?" onkeypress="if(event.key==='Enter')send()">
                 <button onclick="send()">БАЗАР</button>
             </div>
         </div>
@@ -54,17 +81,12 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
-        // Авто-редирект на HTTPS для работы микрофона
-        if (location.protocol === 'http:' && location.hostname !== 'localhost') {
-            location.href = location.href.replace('http:', 'https:');
-        }
-
         const socket = io();
         let myPeer, myStream, currentCall, myNick;
 
         function start() {
             myNick = document.getElementById('nick').value.trim();
-            if(!myNick) return alert("Имя введи!");
+            if(!myNick) return;
             document.getElementById('auth-overlay').style.display='none';
             document.getElementById('app').style.display='flex';
 
@@ -76,7 +98,6 @@
             });
 
             myPeer.on('open', id => {
-                console.log('Peer connected with ID:', id);
                 socket.emit('register-user', { peerId: id, name: myNick });
             });
 
@@ -85,43 +106,57 @@
                 document.getElementById('call-overlay').style.display='flex';
                 document.getElementById('ring').play().catch(() => {});
             });
-
-            myPeer.on('error', e => console.error('PeerJS Error:', e));
         }
 
         async function accept() {
             try {
                 myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 currentCall.answer(myStream);
-                currentCall.on('stream', s => {
-                    const a = new Audio(); a.srcObject = s; a.play();
-                });
-                stopRing();
-            } catch(e) { alert("Вруби микрофон в браузере!"); }
+                setupStream(currentCall);
+                stopRingtone();
+                document.getElementById('hangup-ui').style.display = 'block';
+            } catch(e) { alert("Вруби микр!"); }
         }
 
-        function reject() { if(currentCall) currentCall.close(); stopRing(); }
-        function stopRing() {
+        function reject() {
+            if(currentCall) currentCall.close();
+            stopRingtone();
+        }
+
+        function hangup() {
+            if(currentCall) currentCall.close();
+            if(myStream) myStream.getTracks().forEach(t => t.stop());
+            document.getElementById('hangup-ui').style.display = 'none';
+        }
+
+        function stopRingtone() {
             document.getElementById('call-overlay').style.display='none';
-            document.getElementById('ring').pause();
+            const r = document.getElementById('ring');
+            r.pause(); r.currentTime = 0;
         }
 
         async function callUser(peerId) {
             try {
                 myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const c = myPeer.call(peerId, myStream);
-                c.on('stream', s => {
-                    const a = new Audio(); a.srcObject = s; a.play();
-                });
-            } catch(e) { alert("Без микрафона не наберешь."); }
+                currentCall = c;
+                setupStream(c);
+                document.getElementById('hangup-ui').style.display = 'block';
+            } catch(e) { alert("Микрофон!"); }
+        }
+
+        function setupStream(c) {
+            c.on('stream', s => {
+                const a = new Audio(); a.srcObject = s; a.play();
+            });
+            c.on('close', () => {
+                document.getElementById('hangup-ui').style.display = 'none';
+            });
         }
 
         function send() {
             const m = document.getElementById('msg').value;
-            if(m) {
-                socket.emit('chat message', { name: myNick, text: m });
-                document.getElementById('msg').value = '';
-            }
+            if(m) { socket.emit('chat message', { name: myNick, text: m }); document.getElementById('msg').value=''; }
         }
 
         socket.on('chat message', m => {
