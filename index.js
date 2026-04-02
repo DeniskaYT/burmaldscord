@@ -7,7 +7,7 @@ const { ExpressPeerServer } = require('peer');
 
 const peerServer = ExpressPeerServer(server, { debug: true, path: '/myapp' });
 app.use('/peerjs', peerServer);
-app.use(express.static(__dirname)); // ← теперь ищет в корне репозитория
+criptapp.use(express.static('public')); // ← теперь ищет в корне репозитория
 
 let activeUsers = [];
 
