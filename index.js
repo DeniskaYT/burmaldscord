@@ -1,4 +1,4 @@
-﻿// Build ID: 308308718
+// Build ID: 308308718
 const express = require('express');
 const app = express();
 const server = require('http').Server(app);
@@ -7,7 +7,7 @@ const { ExpressPeerServer } = require('peer');
 
 const peerServer = ExpressPeerServer(server, { debug: true, path: '/myapp' });
 app.use('/peerjs', peerServer);
-app.use(express.static('public'));
+app.use(express.static(__dirname)); // ← теперь ищет в корне репозитория
 
 let activeUsers = [];
 
