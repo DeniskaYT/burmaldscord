@@ -2,21 +2,39 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Бурмалдскорд</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BURMALDSCORD | HQ</title>
     <style>
-        body { background: #111; color: #0f0; font-family: monospace; display: flex; flex-direction: column; height: 100vh; margin: 0; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; border-bottom: 1px solid #0f0; }
-        #controls { padding: 10px; background: #222; display: flex; gap: 10px; }
-        input { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px; flex: 1; }
-        button { background: #0f0; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        body { background: #0a0a0a; color: #00ff41; font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; }
+        #sidebar { width: 250px; border-right: 1px solid #00ff41; padding: 20px; display: flex; flex-direction: column; background: #000; }
+        #main { flex: 1; display: flex; flex-direction: column; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; background: rgba(0, 255, 65, 0.05); }
+        #controls { padding: 15px; background: #000; border-top: 1px solid #00ff41; display: flex; gap: 10px; }
+        input { background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 10px; flex: 1; outline: none; }
+        button { background: #00ff41; color: #000; border: none; padding: 10px 15px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
+        button:hover { background: #fff; }
+        .user-item { margin-bottom: 10px; padding: 5px; border-bottom: 1px hide solid #333; display: flex; justify-content: space-between; }
+        .status { color: #555; font-size: 0.8em; }
+        .status.online { color: #00ff41; }
+        #voice-controls { margin-top: auto; padding-top: 20px; border-top: 1px solid #333; }
+        .mute-btn { width: 100%; background: #f00; color: #fff; margin-bottom: 5px; }
     </style>
 </head>
 <body>
-    <div id="chat"></div>
-    <div id="controls">
-        <input id="msg" placeholder="Пиши сюда, боец..." />
-        <button onclick="send()">Отправить</button>
-        <button id="call-btn" style="background: #f00; color: #fff;">ВОЙТИ В ГОЛОС</button>
+    <div id="sidebar">
+        <h3>В СЕТИ</h3>
+        <div id="user-list"></div>
+        <div id="voice-controls">
+            <button id="call-btn">ПОДКЛЮЧИТЬ ГОЛОС</button>
+            <button id="mute-btn" class="mute-btn" style="display:none;">ВЫКЛ МИКРОФОН</button>
+        </div>
+    </div>
+    <div id="main">
+        <div id="chat"></div>
+        <div id="controls">
+            <input id="msg" placeholder="Введите сообщение..." autocomplete="off" />
+            <button onclick="send()">ОТПРАВИТЬ</button>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -25,45 +43,78 @@
         const socket = io();
         const chat = document.getElementById('chat');
         const msgInput = document.getElementById('msg');
+        const userList = document.getElementById('user-list');
+        const muteBtn = document.getElementById('mute-btn');
         const peer = new Peer(undefined, { host: '/', port: '443', path: '/peerjs' });
 
-        // Голос
-        const myAudio = document.createElement('audio');
-        myAudio.muted = true;
+        let myStream;
+        let isMuted = false;
 
+        // Инициализация голоса
         navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            myStream = stream;
+            
             document.getElementById('call-btn').onclick = () => {
-                alert('Голосовая связь активирована! Жди кентов.');
                 socket.emit('join-room', peer.id);
+                document.getElementById('call-btn').style.display = 'none';
+                muteBtn.style.display = 'block';
+                addSelfToList();
+            };
+
+            muteBtn.onclick = () => {
+                isMuted = !isMuted;
+                myStream.getAudioTracks()[0].enabled = !isMuted;
+                muteBtn.textContent = isMuted ? 'ВКЛ МИКРОФОН' : 'ВЫКЛ МИКРОФОН';
+                muteBtn.style.background = isMuted ? '#00ff41' : '#f00';
+                muteBtn.style.color = isMuted ? '#000' : '#fff';
             };
 
             peer.on('call', call => {
                 call.answer(stream);
                 const audio = document.createElement('audio');
-                call.on('stream', userStream => {
-                    audio.srcObject = userStream;
-                    audio.play();
-                });
+                call.on('stream', userStream => { playStream(audio, userStream); });
             });
 
             socket.on('user-connected', userId => {
                 const call = peer.call(userId, stream);
                 const audio = document.createElement('audio');
-                call.on('stream', userStream => {
-                    audio.srcObject = userStream;
-                    audio.play();
-                });
+                call.on('stream', userStream => { playStream(audio, userStream); });
+                addUserToList(userId);
             });
         });
 
+        function playStream(audio, stream) {
+            audio.srcObject = stream;
+            audio.play();
+        }
+
+        function addUserToList(id) {
+            const div = document.createElement('div');
+            div.className = 'user-item';
+            div.innerHTML = <span>Юзер: \...</span> <span class="status online">●</span>;
+            userList.appendChild(div);
+        }
+
+        function addSelfToList() {
+            const div = document.createElement('div');
+            div.className = 'user-item';
+            div.innerHTML = <span>ВЫ (Архонт)</span> <span class="status online">●</span>;
+            userList.prepend(div);
+        }
+
         // Чат
         function send() {
-            socket.emit('chat message', msgInput.value);
-            msgInput.value = '';
+            if(msgInput.value) {
+                socket.emit('chat message', msgInput.value);
+                msgInput.value = '';
+            }
         }
+        
+        msgInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') send(); });
+
         socket.on('chat message', m => {
             const div = document.createElement('div');
-            div.textContent = '> ' + m;
+            div.textContent = '[SYSTEM]: ' + m;
             chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
         });
