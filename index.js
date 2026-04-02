@@ -1,4 +1,5 @@
-﻿const express = require('express');
+﻿// Build ID: 308308718
+const express = require('express');
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
@@ -16,13 +17,10 @@ io.on('connection', (socket) => {
         activeUsers.push({ id: data.peerId, name: data.name });
         io.emit('update-user-list', activeUsers);
     });
-
     socket.on('join-voice-room', (userId) => {
         socket.broadcast.emit('user-connected-voice', userId);
     });
-
     socket.on('chat message', (msg) => { io.emit('chat message', msg); });
-
     socket.on('disconnect', () => {
         activeUsers = activeUsers.filter(u => u.id !== socket.userId);
         io.emit('update-user-list', activeUsers);
@@ -30,5 +28,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { console.log('HQ LIVE ON PORT ' + PORT); });
-// Force Update: 04/02/2026 15:05:33
+server.listen(PORT, () => { console.log('HQ LIVE [' + 308308718 + '] ON PORT ' + PORT); });
