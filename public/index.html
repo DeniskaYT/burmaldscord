@@ -1,40 +1,71 @@
-<!DOCTYPE html>
-<html>
+﻿<!DOCTYPE html>
+<html lang="ru">
 <head>
+    <meta charset="UTF-8">
     <title>Бурмалдскорд</title>
     <style>
-        body { background: #121212; color: #fff; font-family: sans-serif; }
-        #messages { list-style-type: none; margin: 0; padding: 20px; }
-        #form { display: flex; position: fixed; bottom: 0; width: 100%; padding: 10px; background: #222; }
-        input { flex-grow: 1; padding: 10px; background: #333; color: #fff; border: none; }
-        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        body { background: #111; color: #0f0; font-family: monospace; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; border-bottom: 1px solid #0f0; }
+        #controls { padding: 10px; background: #222; display: flex; gap: 10px; }
+        input { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px; flex: 1; }
+        button { background: #0f0; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
-    <ul id="messages"></ul>
-    <form id="form">
-        <input id="input" autocomplete="off" placeholder="Пиши сюда, боец..." />
-        <button>Отправить</button>
-    </form>
+    <div id="chat"></div>
+    <div id="controls">
+        <input id="msg" placeholder="Пиши сюда, боец..." />
+        <button onclick="send()">Отправить</button>
+        <button id="call-btn" style="background: #f00; color: #fff;">ВОЙТИ В ГОЛОС</button>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
-        var socket = io();
-        var form = document.getElementById('form');
-        var input = document.getElementById('input');
+        const socket = io();
+        const chat = document.getElementById('chat');
+        const msgInput = document.getElementById('msg');
+        const peer = new Peer(undefined, { host: '/', port: '443', path: '/peerjs' });
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            if (input.value) {
-                socket.emit('chat message', input.value);
-                input.value = '';
-            }
+        // Голос
+        const myAudio = document.createElement('audio');
+        myAudio.muted = true;
+
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            document.getElementById('call-btn').onclick = () => {
+                alert('Голосовая связь активирована! Жди кентов.');
+                socket.emit('join-room', peer.id);
+            };
+
+            peer.on('call', call => {
+                call.answer(stream);
+                const audio = document.createElement('audio');
+                call.on('stream', userStream => {
+                    audio.srcObject = userStream;
+                    audio.play();
+                });
+            });
+
+            socket.on('user-connected', userId => {
+                const call = peer.call(userId, stream);
+                const audio = document.createElement('audio');
+                call.on('stream', userStream => {
+                    audio.srcObject = userStream;
+                    audio.play();
+                });
+            });
         });
 
-        socket.on('chat message', function(msg) {
-            var item = document.createElement('li');
-            item.textContent = msg;
-            document.getElementById('messages').appendChild(item);
+        // Чат
+        function send() {
+            socket.emit('chat message', msgInput.value);
+            msgInput.value = '';
+        }
+        socket.on('chat message', m => {
+            const div = document.createElement('div');
+            div.textContent = '> ' + m;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
         });
     </script>
 </body>
