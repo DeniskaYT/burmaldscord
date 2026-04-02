@@ -6,43 +6,46 @@
     <style>
         body { background: #000; color: #00ff41; font-family: 'Consolas', monospace; margin: 0; overflow: hidden; }
         #auth-overlay { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .auth-card { border: 2px solid #00ff41; padding: 40px; background: #0a0a0a; text-align: center; }
+        .auth-card { border: 2px solid #00ff41; padding: 40px; background: #0a0a0a; text-align: center; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); }
         #app { display: none; height: 100vh; display: flex; }
-        #sidebar { width: 300px; border-right: 1px solid #111; padding: 20px; display: flex; flex-direction: column; }
+        #sidebar { width: 300px; border-right: 1px solid #11; padding: 20px; display: flex; flex-direction: column; }
         #user-list { flex: 1; overflow-y: auto; }
-        .user-node { padding: 10px; border: 1px solid #111; margin-bottom: 8px; background: #050505; cursor: pointer; }
-        .user-node:hover { border-color: #00ff41; }
+        .user-node { padding: 12px; border: 1px solid #222; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
+        .user-node:hover { border-color: #00ff41; background: #0a0a0a; }
         #main { flex: 1; position: relative; background: #080808; display: flex; flex-direction: column; }
-        #chat { flex: 1; padding: 20px; overflow-y: auto; }
+        #chat { flex: 1; padding: 20px; overflow-y: auto; font-size: 0.9em; }
         #call-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        input { background: #000; border: 1px solid #222; color: #00ff41; padding: 10px; font-family: inherit; }
-        button { cursor: pointer; background: #00ff41; color: #000; border: none; padding: 10px 20px; font-weight: bold; }
+        .btn { padding: 15px 30px; border: none; cursor: pointer; font-weight: bold; font-family: inherit; margin: 10px; }
+        input { background: #000; border: 1px solid #333; color: #00ff41; padding: 12px; font-family: inherit; outline: none; }
+        button { background: #00ff41; color: #000; border: none; padding: 12px 20px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="auth-overlay">
         <div class="auth-card">
             <h1>BURMALDSCORD</h1>
-            <input id="nick" placeholder="ПОЗЫВНОЙ...">
-            <button onclick="start()">ВХОД</button>
+            <input id="nick" placeholder="ПОЗЫВНОЙ..." autocomplete="off">
+            <button onclick="start()">ВОРВАТЬСЯ</button>
         </div>
     </div>
 
     <div id="app">
         <div id="sidebar">
-            <div style="color:#444; margin-bottom:10px;">В СЕТИ:</div>
+            <div style="color:#444; margin-bottom:15px; font-size: 0.8em;">КЛЕТКИ С КАБАНАМИ:</div>
             <div id="user-list"></div>
         </div>
         <div id="main">
             <div id="call-overlay">
-                <h2 id="caller-display">ВХОДЯЩИЙ...</h2>
-                <button style="background:#00c851" onclick="accept()">ПРИНЯТЬ</button>
-                <button style="background:#ff3547" onclick="reject()">СБРОСИТЬ</button>
+                <h1 id="caller-name">КТО-ТО ЗВОНИТ...</h1>
+                <div>
+                    <button class="btn" style="background:#00c851" onclick="accept()">БАЗАРИТЬ</button>
+                    <button class="btn" style="background:#ff3547" onclick="reject()">СБРОСИТЬ</button>
+                </div>
                 <audio id="ring" loop src="ringtone.mp3"></audio>
             </div>
             <div id="chat"></div>
-            <div style="padding:20px; display:flex; gap:10px;">
-                <input id="msg" style="flex:1" placeholder="Базарни че-нить..." onkeypress="if(event.key==='Enter')send()">
+            <div style="padding:20px; display:flex; gap:10px; border-top: 1px solid #111;">
+                <input id="msg" style="flex:1" placeholder="Пиши че по чем..." onkeypress="if(event.key==='Enter')send()">
                 <button onclick="send()">БАЗАР</button>
             </div>
         </div>
@@ -51,12 +54,17 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
+        // Авто-редирект на HTTPS для работы микрофона
+        if (location.protocol === 'http:' && location.hostname !== 'localhost') {
+            location.href = location.href.replace('http:', 'https:');
+        }
+
         const socket = io();
         let myPeer, myStream, currentCall, myNick;
 
         function start() {
-            myNick = document.getElementById('nick').value;
-            if(!myNick) return;
+            myNick = document.getElementById('nick').value.trim();
+            if(!myNick) return alert("Имя введи!");
             document.getElementById('auth-overlay').style.display='none';
             document.getElementById('app').style.display='flex';
 
@@ -68,6 +76,7 @@
             });
 
             myPeer.on('open', id => {
+                console.log('Peer connected with ID:', id);
                 socket.emit('register-user', { peerId: id, name: myNick });
             });
 
@@ -76,40 +85,50 @@
                 document.getElementById('call-overlay').style.display='flex';
                 document.getElementById('ring').play().catch(() => {});
             });
+
+            myPeer.on('error', e => console.error('PeerJS Error:', e));
         }
 
         async function accept() {
-            myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            currentCall.answer(myStream);
-            currentCall.on('stream', s => {
-                const a = new Audio(); a.srcObject = s; a.play();
-            });
-            stopRing();
+            try {
+                myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                currentCall.answer(myStream);
+                currentCall.on('stream', s => {
+                    const a = new Audio(); a.srcObject = s; a.play();
+                });
+                stopRing();
+            } catch(e) { alert("Вруби микрофон в браузере!"); }
         }
 
-        function reject() { currentCall.close(); stopRing(); }
-        function stopRing() { 
+        function reject() { if(currentCall) currentCall.close(); stopRing(); }
+        function stopRing() {
             document.getElementById('call-overlay').style.display='none';
             document.getElementById('ring').pause();
         }
 
-        async function callUser(id) {
-            myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const c = myPeer.call(id, myStream);
-            c.on('stream', s => {
-                const a = new Audio(); a.srcObject = s; a.play();
-            });
+        async function callUser(peerId) {
+            try {
+                myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const c = myPeer.call(peerId, myStream);
+                c.on('stream', s => {
+                    const a = new Audio(); a.srcObject = s; a.play();
+                });
+            } catch(e) { alert("Без микрафона не наберешь."); }
         }
 
         function send() {
             const m = document.getElementById('msg').value;
-            if(m) { socket.emit('chat message', { name: myNick, text: m }); document.getElementById('msg').value=''; }
+            if(m) {
+                socket.emit('chat message', { name: myNick, text: m });
+                document.getElementById('msg').value = '';
+            }
         }
 
         socket.on('chat message', m => {
             const d = document.createElement('div');
             d.innerHTML = `<b style="color:#00ff41">${m.name}:</b> ${m.text}`;
             document.getElementById('chat').appendChild(d);
+            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
         });
 
         socket.on('update-user-list', users => {
@@ -117,11 +136,11 @@
             list.innerHTML = '';
             users.forEach(u => {
                 if(myPeer && u.id !== myPeer.id) {
-                    const btn = document.createElement('div');
-                    btn.className = 'user-node';
-                    btn.innerHTML = u.name;
-                    btn.onclick = () => callUser(u.id);
-                    list.appendChild(btn);
+                    const div = document.createElement('div');
+                    div.className = 'user-node';
+                    div.innerHTML = `● ${u.name}`;
+                    div.onclick = () => callUser(u.id);
+                    list.appendChild(div);
                 }
             });
         });
