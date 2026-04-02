@@ -1,10 +1,88 @@
-function start() {
-            myNick = document.getElementById('nick').value; 
-            if(!myNick) return;
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>BURMALDSCORD | HQ</title>
+    <style>
+        body { background: #000; color: #00ff41; font-family: 'Consolas', monospace; margin: 0; overflow: hidden; }
+        #auth-overlay { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .auth-card { border: 2px solid #00ff41; padding: 40px; background: #0a0a0a; text-align: center; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); }
+        #app { display: none; height: 100vh; display: flex; }
+        #sidebar { width: 300px; border-right: 1px solid #111; padding: 20px; display: flex; flex-direction: column; }
+        #user-list { flex: 1; overflow-y: auto; cursor: pointer; }
+        .user-node { padding: 10px; border: 1px solid #111; margin-bottom: 8px; background: #050505; transition: 0.2s; }
+        .user-node:hover { border-color: #00ff41; background: #0a0a0a; color: #fff; }
+        #main { flex: 1; position: relative; background: #080808; display: flex; flex-direction: column; }
+        #chat { flex: 1; padding: 20px; overflow-y: auto; border-bottom: 1px solid #111; }
+        #call-overlay { 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.95); 
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; 
+        }
+        .caller-avatar { width: 220px; height: 220px; border-radius: 50%; border: 5px solid #00ff41; animation: shake 0.2s infinite; }
+        .caller-name { font-size: 4em; color: #fff; margin: 30px 0; font-weight: bold; text-transform: uppercase; }
+        .btn-box { display: flex; gap: 40px; }
+        .btn { width: 80px; height: 80px; border-radius: 50%; border: none; cursor: pointer; font-size: 2em; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .btn:hover { transform: scale(1.1); }
+        @keyframes shake { 0% { transform: rotate(0deg); } 50% { transform: rotate(3deg); } 100% { transform: rotate(0deg); } }
+        input { background: #000; border: 1px solid #222; color: #00ff41; padding: 12px; font-family: inherit; outline: none; }
+        input:focus { border-color: #00ff41; }
+        button { cursor: pointer; background: #00ff41; color: #000; border: none; padding: 12px; font-weight: bold; font-family: inherit; }
+    </style>
+</head>
+<body>
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <h1 style="letter-spacing: 10px;">BURMALDSCORD</h1>
+            <input id="nick" placeholder="ПОЗЫВНОЙ..." autocomplete="off">
+            <br><br>
+            <button onclick="start()">ВОРВАТЬСЯ</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <div id="sidebar">
+            <div style="color: #444; font-size: 0.8em; margin-bottom: 15px; letter-spacing: 2px;">ОНЛАЙН-КАБАНЫ:</div>
+            <div id="user-list"></div>
+            <br>
+            <input id="tid" placeholder="ID КЕНТА">
+            <button onclick="call()" style="margin-top: 10px;">НАБРАТЬ</button>
+        </div>
+
+        <div id="main">
+            <div id="call-overlay">
+                <div style="color: #00ff41; letter-spacing: 5px; margin-bottom: 20px;">ВХОДЯЩИЙ ВЫЗОВ</div>
+                <img src="https://i.postimg.cc/85zXpxYy/image.png" class="caller-avatar">
+                <div class="caller-name">ДРУН</div>
+                <div class="btn-box">
+                    <button class="btn" style="background:#ff3547" onclick="reject()">✖</button>
+                    <button class="btn" style="background:#00c851" onclick="accept()">✔</button>
+                </div>
+                <audio id="ring" loop src="ringtone.mp3"></audio>
+            </div>
+
+            <div id="chat"></div>
+
+            <div style="padding:20px; display:flex; gap: 10px;">
+                <input id="msg" style="flex:1" placeholder="Че скажешь?" onkeypress="if(event.key==='Enter') send()">
+                <button onclick="send()">БАЗАР</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script>
+        const socket = io(); 
+        let myPeer, myStream, currentCall, myNick;
+
+        function start() {
+            myNick = document.getElementById('nick').value.trim(); 
+            if(!myNick) return alert("Введи позывной!");
+
             document.getElementById('auth-overlay').style.display='none'; 
             document.getElementById('app').style.display='flex';
             
-            // Создаем объект Peer
+            // Инициализация PeerJS
             myPeer = new Peer(undefined, {
                 host: location.hostname,
                 port: location.port || (location.protocol === 'https:' ? 443 : 80),
@@ -13,43 +91,91 @@ function start() {
             });
 
             myPeer.on('open', id => {
-                console.log("Мой ID получен:", id); // Добавил лог для проверки
+                console.log("Связь установлена. Мой ID:", id);
                 socket.emit('register-user', { peerId: id, name: myNick });
-            });
-
-            myPeer.on('error', err => {
-                console.error("Ошибка PeerJS:", err.type);
-                if(err.type === 'peer-unavailable') alert("Кент не в сети или ID неверный");
             });
 
             myPeer.on('call', c => { 
                 currentCall = c; 
                 document.getElementById('call-overlay').style.display='flex'; 
-                document.getElementById('ring').play().catch(e => console.log("Музло заблочено")); 
+                document.getElementById('ring').play().catch(() => console.log("Браузер жмет звук")); 
+            });
+
+            myPeer.on('error', err => {
+                console.error("PeerJS Error:", err.type);
+                if(err.type === 'peer-unavailable') alert("Кент не в сети!");
             });
         }
 
-        async function call() {
-            const id = document.getElementById('tid').value; 
-            if(!id) return alert("Введи ID, ежжи!");
-            
-            // ВОТ ТУТ ПРОВЕРКА:
-            if (!myPeer || !myPeer.id) {
-                return alert("Погоди, связь еще не установилась (Peer не готов)!");
+        async function accept() { 
+            try {
+                myStream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+                currentCall.answer(myStream);
+                currentCall.on('stream', s => { 
+                    const a = document.createElement('audio'); 
+                    a.srcObject = s; a.play(); 
+                });
+                closeUI();
+            } catch (err) {
+                alert("Микрофон не пашет! Проверь настройки или HTTPS.");
             }
+        }
+
+        function reject() { if(currentCall) currentCall.close(); closeUI(); }
+
+        function closeUI() { 
+            document.getElementById('call-overlay').style.display='none'; 
+            document.getElementById('ring').pause(); 
+            document.getElementById('ring').currentTime = 0;
+        }
+
+        async function call() {
+            const id = document.getElementById('tid').value.trim(); 
+            if(!id) return alert("Вставь ID кента!");
+            if(!myPeer || !myPeer.id) return alert("Подожди секунду, сеть еще грузится...");
 
             try {
                 myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                console.log("Микрофон захвачен, звоню на:", id);
                 const c = myPeer.call(id, myStream);
-                
                 c.on('stream', s => { 
                     const a = document.createElement('audio'); 
-                    a.srcObject = s; 
-                    a.play(); 
+                    a.srcObject = s; a.play(); 
                 });
             } catch (err) {
-                console.error(err);
-                alert("Микрофон не отвечает или ты запретил доступ.");
+                alert("Браузер не дает микрофон!");
             }
         }
+
+        function send() { 
+            const m = document.getElementById('msg').value; 
+            if(m) { 
+                socket.emit('chat message', { name: myNick, text: m }); 
+                document.getElementById('msg').value=''; 
+            } 
+        }
+
+        socket.on('chat message', m => { 
+            const d = document.createElement('div'); 
+            d.style.marginBottom = "5px";
+            d.innerHTML = `<span style="color:#444">[${new Date().toLocaleTimeString()}]</span> <b style="color:#00ff41">${m.name}:</b> ${m.text}`; 
+            const chat = document.getElementById('chat');
+            chat.appendChild(d); 
+            chat.scrollTop = chat.scrollHeight;
+        });
+
+        socket.on('update-user-list', u => { 
+            const l = document.getElementById('user-list'); 
+            l.innerHTML = '';
+            u.forEach(user => { 
+                if(myPeer && user.id !== myPeer.id) { 
+                    const i = document.createElement('div'); 
+                    i.className = 'user-node';
+                    i.innerHTML = `<b>${user.name}</b><br><small style="color:#333; font-size: 0.75em;">${user.id}</small>`; 
+                    i.onclick = () => document.getElementById('tid').value = user.id; 
+                    l.appendChild(i); 
+                } 
+            });
+        });
+    </script>
+</body>
+</html>
